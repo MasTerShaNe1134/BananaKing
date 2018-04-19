@@ -1,0 +1,187 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <set>
+#include <vector>
+#include <map>
+#include <sstream>
+
+using namespace std;  
+
+
+//对自动读取的每一个单词进行处理
+string analysis(string item)
+{
+	string temp = "";
+	bool flag = false;
+	for(auto & r:item)
+	{
+		if(r == ',' || r == ',')
+		{
+			continue;
+		}
+		if(r <= 'z' && r >= 'a')
+		{
+			flag = true;
+		}
+		if(r <= 'Z' && r >= 'A')
+		{
+			flag = true;
+			r += 32;
+		}
+		if(flag)
+		{
+			temp += r;
+		}
+	}
+	if(temp.size() == 0)
+	{
+		return temp;
+	}
+	for(auto i = temp.rbegin();i <= temp.rend();i++)			//从尾开始遍历string，删去string中不必要的后缀
+	{
+		if(*i <= 'z' && *i >= 'a')
+		{
+			break;
+		}
+		temp.pop_back();		//删去后缀
+	}
+	return temp;
+}
+
+
+
+
+int main()
+{
+	int words = 0;
+	long long int cnt = 0;
+	map<string,long double> frequency;
+	map<string,long double> corpus;	
+
+
+
+
+	/******************************
+	********** 制作语料库 *********
+	******************************/
+
+	for (int i = 1; i <= 1; i++)	
+	{
+		//ostringstream out;					
+		//out << "EN (" << i << ").txt";
+		//cout<<out.str()<<endl;
+		//ifstream file(out.str());			
+
+
+
+
+		ifstream input("EN(1).txt");			//读入外文小说
+		string item;
+		while (!input.eof())
+		{
+			input >> item;
+			item = analysis(item);				//调用analysis函数
+			//cout<<item<<endl;
+	
+			if (item.empty())				//若空字符串跳过
+			{
+				continue;
+			}
+			if (frequency.find(item) == frequency.end())	//如果是新的字符串，则在语料库里新建一个并初始化
+			{
+				frequency[item] = 0.0;
+			};
+			frequency[item]++;				//增加出现次数
+			words++;		
+			if (words == 500)				//每读入words个词就算作一篇文章，合并语料库并清空临时语料库
+			{
+				for(auto & r:frequency)
+				{
+					if(corpus.find(r.first) == corpus.end())
+					{
+						corpus[r.first] = 0.0;
+					}	
+					corpus[r.first]++;
+				}
+				frequency.clear();
+				cnt++;
+				words = 0;
+			}
+		}
+	}
+
+	//输出每个单词的IDF值
+	ofstream output("corpus.csv");				
+	for (auto &r : corpus)						
+	{
+		r.second /= (cnt + 1);
+		r.second = abs(log(r.second));
+		output << r.first << "," << r.second << endl;
+	}
+	output.close();
+
+
+
+
+	//输出语料库corpus每个key对应的value,即每个词的IDF值
+	/*
+	cout<<"输出语料库corpus每个key及对应的value，即每个词的IDF值"<<endl;
+	map<string,long double>::iterator  iter;
+	for(iter = corpus.begin(); iter != corpus.end(); iter++)  
+	{  
+		cout<<iter->first<<"  "<<iter->second<<endl;  
+	}
+	*/
+
+
+
+
+	/******************************
+	***** 针对某一文章进行检索 ****
+	******************************/
+
+	map<string,long double> frequency2;				//创建临时容器frequency2
+	ifstream file("aa.txt");						//打开文件
+	string item2;
+	long long int TotalWords = 0;					//单词总数，包括相同的单词
+
+	while (!file.eof())						//循环读入文章中所有单词
+	{								//以下过程与构建语料库过程类似
+		file >> item2;
+		item2 = analysis(item2);
+
+		if (item2.empty())
+		{
+			continue;
+		}
+		if (frequency2.find(item2) == frequency2.end())
+		{
+			frequency2[item2] = 0.0;
+		}
+
+		frequency2[item2]++;
+		TotalWords++;
+	}
+
+
+	//输出语料库frequency2每个key对应的value
+	/*
+	cout<<"输出语料库frequency2每个key及对应的value"<<endl;
+	map<string,long double>::iterator  iter2;
+	for(iter2 = frequency2.begin(); iter2 != frequency2.end(); iter2++)  
+	{  
+		cout<<iter2->first<<"  "<<iter2->second<<endl;  
+	}
+	*/
+
+	ofstream output2("data.csv");	
+	for (auto &r : frequency2)					//输出数据到data表格
+	{
+		r.second /= TotalWords;						//计算TF值
+		r.second *= corpus[r.first];				//计算TF-IDF值
+		output2 << r.first << "," << r.second << endl;
+	}
+	output2.close();
+
+}
